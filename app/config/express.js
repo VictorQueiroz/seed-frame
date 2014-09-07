@@ -8,12 +8,11 @@ cookieParser = require('cookie-parser'),
 /**
  * This module provides "guest" sessions, meaning any visitor
  * will have a session, authenticated or not. If a session is
- * new a Set-Cookie will be produced regardless of populating
+ * new, a Set-Cookie will be produced regardless of populating
  * the session.
  */
 cookieSession = require('cookie-session'),
 
-csrf = require('csurf'),
 methodOverride	= require('method-override'),
 errorhandler = require('errorhandler'),
 morgan = require('morgan'),
@@ -28,6 +27,8 @@ path = require('path'),
 passport = require('passport'),
 SequelizeStore = require('connect-session-sequelize')(session.Store);
 
+var lusca = require('lusca');
+
 module.exports = function (sequelize) {
 	var app = express();
 
@@ -38,12 +39,9 @@ module.exports = function (sequelize) {
 	// Enable jsonp
 	app.enable('jsonp callback');
 
-	app.use(cors());
 	// app.use(favicon(path.join(__dirname, '../..', 'public', 'favicon.ico')));
 
 	app.use(responseTime());
-
-	app.use(morgan('dev'));
 
 	app.use(bodyParser.urlencoded({
 		extended: true
@@ -54,12 +52,9 @@ module.exports = function (sequelize) {
 
 	// Passport required options
 	app.use(session({
-		// maxAge: new Date(Date.now() + 3600000),
 		secret: 'something here',
 		saveUninitialized: true,
 		resave: true,
-		// proxy: true,
-		// secureProxy: true,
 		store: new SequelizeStore({
 			db: sequelize
 		})
@@ -81,12 +76,26 @@ module.exports = function (sequelize) {
 	// Development only
 	if (app.get('env') === 'development') {
 		app.use(errorhandler());
+		app.use(morgan('dev'));
 	}
 
 	// Production only
 	if (app.get('env') === 'production') {
-		app.use(csrf());
 	}
+
+	app.use(lusca({
+		csrf: {
+			key: 'seed-frame_12f12m10g9nk50n94m640293910mc'
+		},
+		csp: {},
+		xframe: 'SAMEORIGIN',
+		p3p: 'ABCDEF',
+		hsts: {
+			maxAge: 31536000,
+			includeSubDomains: true
+		},
+		xssProtection: true
+	}));	
 
 	return app; 
 };
